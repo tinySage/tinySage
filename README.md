@@ -1,7 +1,7 @@
-- 👋 Hi, I’m @tinySage
-- 👀 I’m interested in Data Science and ML
-- 🌱 I’m currently learning Python and Django Frameworks
-- 💞️ I’m looking to collaborate on projects based on my interests
+- 👋 Hi, I’m Mukta
+- 👀 I’m interested in Data Science and ML.
+- 🌱 I’m currently doing my Masters in CompSci Engineering.
+- 💞️ I’m here to code and learn more.
 - 😄 Pronouns: She/Her
 <!---
 tinySage/tinySage is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
