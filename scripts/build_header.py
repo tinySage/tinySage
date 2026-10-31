@@ -30,6 +30,7 @@ SINCE = "Oct 2026"
 FINDING = "Sinus rhythm"
 NOTE = "Unconfirmed. Awaiting review by Maranello."
 RATE = 72  # bpm; the drawn beats are spaced to match
+MASCOT_ROOM = 0  # space kept after the name for the mascot to sit
 
 
 # ---------------------------------------------------------------- text
@@ -262,7 +263,7 @@ def light():
     ink, muted = "#221A1F", "#76646C"
     y0 = 306
     em = 112
-    name_x = W - 40 - name_width(NAME, em)
+    name_x = W - 40 - MASCOT_ROOM - name_width(NAME, em)
     rr = 60 / RATE * 150
     rs = layout_beats(130, name_x, rr)
     ecg_end = rs[-1] + 0.36 * 150
@@ -319,7 +320,7 @@ def dark():
     rose = "#F4A6C2"
     y0 = 306
     em = 100
-    wave_right = 892
+    wave_right = 892 - MASCOT_ROOM
     name_x = wave_right - name_width(NAME, em)
     rr = 60 / RATE * 150
     rs = layout_beats(80, name_x, rr)
