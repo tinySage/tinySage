@@ -1,13 +1,23 @@
-"""tinySage, the strip's mascot: a small round sage with a sprig on its head.
+"""tinySage, the strip's mascot: a small black cat with blue eyes and a green
+sprout growing from its head.
 
-draw(pose, ...) returns an SVG <g> for one pose. The character is drawn in a
-100 x 100 box with its feet resting on y = 90, so placing it on a baseline is
-a matter of translating (x - 50*s, baseline - 90*s).
+draw(pose, theme, ...) returns an SVG <g> for one pose. The cat is drawn in a
+100 x 100 box with its feet resting on y = 90, then scaled to `size` and
+placed so its feet sit on `baseline` at horizontal centre `x`.
 """
 
 import math
 
 POSES = ("stand", "hop", "land", "sit")
+
+# printed strip: an ink-black cat on paper
+LIGHT = dict(outline="#221A1F", fill="#221A1F", eye="#5DA9E9", pupil="#0E1A2B",
+             shine="#FFFFFF", face="#F4A9B8", blush="#F4A9B8", ear="#F2AFBB",
+             leaf="#8DBB75", vein="#4F7A3E")
+# monitor: the same cat, outlined in the trace's rose so it reads on black
+DARK = dict(outline="#F4A6C2", fill="#1A1618", eye="#6CB6F0", pupil="#0E1A2B",
+            shine="#FFFFFF", face="#F4A6C2", blush="#F4A6C2", ear="#F4A6C2",
+            leaf="#86B86E", vein="#A9D493")
 
 
 def _f(v):
@@ -15,95 +25,105 @@ def _f(v):
 
 
 def _leaf(bx, by, length, width, angle_deg):
-    """A soft lance-shaped sage leaf from (bx, by), tip pointing at angle."""
     a = math.radians(angle_deg)
     ca, sa = math.cos(a), math.sin(a)
 
-    def p(u, v):  # leaf-local (along, across) -> canvas
+    def p(u, v):
         return bx + u * ca - v * sa, by + u * sa + v * ca
 
     L, W = length, width
-    pts = [p(0, 0), p(L * .28, -W), p(L * .72, -W * .9), p(L, 0),
-           p(L * .72, W * .9), p(L * .28, W), p(0, 0)]
+    pts = [p(0, 0), p(L * .25, -W), p(L * .72, -W * .95), p(L, 0),
+           p(L * .72, W * .95), p(L * .25, W), p(0, 0)]
     q = [f"{_f(x)},{_f(y)}" for x, y in pts]
     outline = f"M{q[0]}C{q[1]} {q[2]} {q[3]}C{q[4]} {q[5]} {q[6]}Z"
-    m0, m1 = p(L * .12, 0), p(L * .78, 0)
-    vein = f"M{_f(m0[0])},{_f(m0[1])}L{_f(m1[0])},{_f(m1[1])}"
-    return outline, vein
+    m0, m1 = p(L * .15, 0), p(L * .75, 0)
+    return outline, f"M{_f(m0[0])},{_f(m0[1])}L{_f(m1[0])},{_f(m1[1])}"
 
 
-def draw(pose, ink, fill, blush, leaf_fill=None, x=0.0, baseline=0.0, size=46.0,
-         stroke=2.3, extra=""):
-    """One pose of the mascot. `size` is its height in canvas units."""
+SILHOUETTE = ("M22,65C22,54 24,46 28,40"
+              "L30.5,24.5Q31.5,20.5 34.5,23"
+              "L43.5,32.5C47.5,31.4 52.5,31.4 56.5,32.5"
+              "L65.5,23Q68.5,20.5 69.5,24.5"
+              "L72,40C76,46 78,54 78,65"
+              "C78,81 66,88 50,88C34,88 22,81 22,65Z")
+
+LIMBS = {
+    "stand": ["M25,58C20,54 17,49 17,43"],                              # one paw waving, away from the tail
+    "hop":   ["M26,58C22,53 20,48 20,43", "M74,58C78,53 80,48 80,43"],   # both paws up
+    "land":  ["M23,68C19,70 15,73 13,77", "M77,68C81,70 85,73 87,77"],   # arms out for balance
+    "sit":   [],
+}
+TAILS = {
+    "stand": "M73,80C86,82 93,72 90,61C89,56 85,55 84,59",
+    "hop":   "M70,82C80,90 92,86 94,74",
+    "land":  "M73,82C86,84 94,78 95,70",
+    "sit":   "M68,86C78,92 91,89 93,79",
+}
+
+
+def draw(pose, theme, x=0.0, baseline=0.0, size=46.0, stroke=2.3, extra=""):
+    t = theme
     s = size / 90.0
     sx, sy = {"stand": (1, 1), "hop": (.9, 1.1), "land": (1.14, .84), "sit": (1.05, .92)}[pose]
-    sw = stroke / s  # keep the line weight constant whatever the scale
+    sw = stroke / s
+    same = t["outline"] == t["fill"]
 
-    parts = []
-    # feet behind the body (standing / hopping / landing)
-    if pose == "hop":
-        feet = [(42, 86, 5, 3.4), (58, 86, 5, 3.4)]
-    elif pose == "sit":
-        feet = []
-    else:
-        feet = [(39, 88, 7, 3.8), (61, 88, 7, 3.8)]
+    def thick(d, w):
+        """An outlined limb: outline-coloured wide stroke, fill-coloured core."""
+        out = f'<path d="{d}" fill="none" stroke="{t["outline"]}" stroke-width="{_f(w + (0 if same else 2 * sw))}"/>'
+        core = "" if same else f'<path d="{d}" fill="none" stroke="{t["fill"]}" stroke-width="{_f(w)}"/>'
+        return out + core
+
+    g = []
+    g.append(thick(TAILS[pose], 6.5))
+    feet = [(42, 86, 5, 3.4), (58, 86, 5, 3.4)] if pose == "hop" else \
+           [] if pose == "sit" else [(39, 88, 7, 3.8), (61, 88, 7, 3.8)]
     for cx, cy, rx, ry in feet:
-        parts.append(f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="{fill}"/>')
+        g.append(f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="{t["fill"]}"/>')
+    for d in LIMBS[pose]:
+        g.append(thick(d, 6))
 
-    # arms
-    if pose == "hop":
-        arms = ["M25,58c-5,-4 -7,-10 -6,-15", "M75,58c5,-4 7,-10 6,-15"]
-    elif pose == "land":
-        arms = ["M23,66c-5,1 -9,4 -10,8", "M77,66c5,1 9,4 10,8"]
-    elif pose == "sit":
-        arms = ["M30,70c3,3 8,4 12,3", "M70,70c-3,3 -8,4 -12,3"]
-    else:
-        arms = ["M23,64c-5,2 -7,6 -7,10", "M77,64c5,-3 8,-10 8,-16"]  # a small wave
+    # sprout, rooted behind the head
+    g.append(f'<path d="M50,33C50,28 51,24 50.5,18.5" fill="none" stroke="{t["vein"]}"/>')
+    for outline, vein in (_leaf(50.6, 21.5, 14, 5.6, -156), _leaf(50.6, 19.5, 15.5, 6.2, -27)):
+        g.append(f'<path d="{outline}" fill="{t["leaf"]}" stroke="{t["vein"]}"/>')
+        g.append(f'<path d="{vein}" fill="none" stroke="{t["vein"]}" stroke-width="{_f(sw * .5)}"/>')
 
-    body = ("M22,63C22,42 35,31 50,31C65,31 78,42 78,63"
-            "C78,80 66,88 50,88C34,88 22,80 22,63Z")
+    g.append(f'<path d="{SILHOUETTE}" fill="{t["fill"]}"/>')
+    g.append(f'<path d="M31.6,35.5L32.7,27L39.3,33.2Z M68.4,35.5L67.3,27L60.7,33.2Z" '
+             f'fill="{t["ear"]}" opacity=".75" stroke="none"/>')
 
-    # sprig: stem plus three leaves
-    stem = "M50,31C50,26 51,21 50,15"
-    leaves = [_leaf(50, 25, 17, 5.2, -152), _leaf(50.5, 21, 16, 5, -30), _leaf(50, 15.5, 9.5, 3.4, -96)]
+    # whiskers
+    g.append(f'<path d="M22.5,63.5L13,61.5M22.5,67L13,69M77.5,63.5L87,61.5M77.5,67L87,69" '
+             f'fill="none" stroke-width="{_f(sw * .6)}"/>')
 
-    if pose in ("hop",):
-        eyes = (f'<path d="M37,59Q40.5,54 44,59M56,59Q59.5,54 63,59" fill="none"/>')
-        mouth = f'<path d="M46,65Q50,71 54,65Z" fill="{ink}" stroke-linejoin="round"/>'
-    elif pose == "sit":
-        eyes = (f'<path d="M37,58Q40.5,62 44,58M56,58Q59.5,62 63,58" fill="none"/>')
-        mouth = '<path d="M47.5,66Q50,68.5 52.5,66" fill="none"/>'
-    else:
-        eyes = (f'<ellipse cx="40.5" cy="58" rx="2.7" ry="3.6" fill="{ink}" stroke="none"/>'
-                f'<ellipse cx="59.5" cy="58" rx="2.7" ry="3.6" fill="{ink}" stroke="none"/>'
-                f'<circle cx="41.4" cy="56.6" r=".9" fill="{fill}" stroke="none"/>'
-                f'<circle cx="60.4" cy="56.6" r=".9" fill="{fill}" stroke="none"/>')
-        mouth = ('<path d="M47,65.5Q50,69 53,65.5" fill="none"/>' if pose == "stand"
-                 else f'<ellipse cx="50" cy="66.5" rx="1.9" ry="2.3" fill="{ink}" stroke="none"/>')
+    # cheeks and nose
+    g.append(f'<ellipse cx="31.5" cy="65" rx="4" ry="2.3" fill="{t["blush"]}" opacity=".62" stroke="none"/>'
+             f'<ellipse cx="68.5" cy="65" rx="4" ry="2.3" fill="{t["blush"]}" opacity=".62" stroke="none"/>'
+             f'<path d="M48.6,62.6L51.4,62.6L50,64.2Z" fill="{t["face"]}" stroke="{t["face"]}" stroke-width="{_f(sw * .3)}"/>')
 
-    cheeks = (f'<ellipse cx="33" cy="65" rx="4.6" ry="2.6" fill="{blush}" stroke="none"/>'
-              f'<ellipse cx="67" cy="65" rx="4.6" ry="2.6" fill="{blush}" stroke="none"/>')
+    lid = f'fill="none" stroke="{t["eye"]}" stroke-width="{_f(sw * .95)}"'
+    mouth_w = (f'<path d="M46.5,65.4Q48.2,67.6 50,65.6Q51.8,67.6 53.5,65.4" fill="none" '
+               f'stroke="{t["face"]}" stroke-width="{_f(sw * .65)}"/>')
+    if pose in ("stand", "land"):
+        for cx in (40, 60):
+            g.append(f'<ellipse cx="{cx}" cy="57" rx="5" ry="5.6" fill="{t["eye"]}" stroke="none"/>'
+                     f'<ellipse cx="{cx}" cy="57.3" rx="2" ry="3.6" fill="{t["pupil"]}" stroke="none"/>'
+                     f'<circle cx="{cx + 1.9}" cy="54.9" r="1.4" fill="{t["shine"]}" stroke="none"/>'
+                     f'<circle cx="{cx - 1.5}" cy="59.3" r=".7" fill="{t["shine"]}" stroke="none"/>')
+        g.append(mouth_w if pose == "stand" else
+                 f'<ellipse cx="50" cy="66.8" rx="1.6" ry="2" fill="{t["face"]}" stroke="none"/>')
+    elif pose == "hop":
+        g.append(f'<path d="M35.5,58Q40,52.5 44.5,58M55.5,58Q60,52.5 64.5,58" {lid}/>')
+        g.append(f'<path d="M47,65.2Q50,70.5 53,65.2Z" fill="{t["face"]}" stroke="none"/>')
+    else:  # sit: content, eyes closed, paws tucked in front
+        g.append(f'<path d="M35.5,57Q40,61 44.5,57M55.5,57Q60,61 64.5,57" {lid}/>')
+        g.append(mouth_w)
+        for cx in (41, 59):
+            g.append(f'<ellipse cx="{cx}" cy="85.5" rx="6.5" ry="3.6" fill="{t["fill"]}"/>')
 
-    sprig = [f'<path d="{stem}" fill="none"/>']
-    for outline, vein in leaves:
-        sprig.append(f'<path d="{outline}" fill="{leaf_fill or fill}"/>')
-        sprig.append(f'<path d="{vein}" fill="none" stroke-width="{_f(sw * .55)}"/>')
-
-    seat = []
-    if pose == "sit":
-        seat = [f'<ellipse cx="35" cy="88" rx="8" ry="4" fill="{fill}"/>',
-                f'<ellipse cx="65" cy="88" rx="8" ry="4" fill="{fill}"/>']
-
-    inner = "".join(
-        parts
-        + [f'<path d="{a}" fill="none"/>' for a in arms]
-        + sprig
-        + [f'<path d="{body}" fill="{fill}"/>', cheeks, eyes, mouth]
-        + seat
-    )
-    tx = x - 50 * s
-    ty = baseline - 90 * s
+    tx, ty = x - 50 * s, baseline - 90 * s
     squash = f"translate(50 90) scale({sx} {sy}) translate(-50 -90)"
     return (f'<g transform="translate({_f(tx)} {_f(ty)}) scale({_f(s)})"{extra}>'
-            f'<g transform="{squash}" stroke="{ink}" stroke-width="{_f(sw)}" '
-            f'stroke-linecap="round" stroke-linejoin="round">{inner}</g></g>')
+            f'<g transform="{squash}" stroke="{t["outline"]}" stroke-width="{_f(sw)}" '
+            f'stroke-linecap="round" stroke-linejoin="round">{"".join(g)}</g></g>')
