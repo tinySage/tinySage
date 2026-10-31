@@ -359,9 +359,39 @@ def dark():
 """
 
 
+# ---------------------------------------------------------------- the cat around the frame
+
+MARGIN_LEFT, MARGIN_TOP, MARGIN_RIGHT = 54, 66, 54
+
+
+def with_cat(svg, theme):
+    """Place the panel inside a wider canvas and add tinySage walking its border."""
+    import re
+    import mascot
+
+    vb = re.search(r'viewBox="0 0 (\d+) (\d+)"', svg)
+    pw, ph = int(vb.group(1)), int(vb.group(2))
+    head = svg.index(">", svg.index("<svg")) + 1
+    inner = svg[head: svg.rindex("</svg>")]
+    meta = "".join(re.findall(r"<title.*?</title>|<desc.*?</desc>", inner, flags=re.S))
+    styles = "".join(re.findall(r"<style>.*?</style>", inner, flags=re.S))
+    body = re.sub(r"<title.*?</title>|<desc.*?</desc>|<style>.*?</style>", "", inner, flags=re.S)
+    meta = meta.replace("</desc>", " A small black cat with blue eyes and a green sprout on its head "
+                                   "trots along the bottom edge, jumps up round the right side and sits on the top edge.</desc>")
+
+    css, cat, canvas_h = mascot.route(theme, pw, ph, MARGIN_LEFT, MARGIN_TOP)
+    W = MARGIN_LEFT + pw + MARGIN_RIGHT
+    H = int(canvas_h)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" '
+            f'role="img" aria-labelledby="t d">\n{meta}\n{styles}<style>{css}</style>\n'
+            f'<g transform="translate({MARGIN_LEFT} {MARGIN_TOP})">{body}</g>\n{cat}\n</svg>\n')
+
+
 if __name__ == "__main__":
+    import mascot
+
     OUT.mkdir(exist_ok=True)
-    for name, fn in [("header-light.svg", light), ("header-dark.svg", dark)]:
-        svg = fn()
+    for name, fn, theme in [("header-light.svg", light, mascot.LIGHT), ("header-dark.svg", dark, mascot.DARK)]:
+        svg = with_cat(fn(), theme)
         (OUT / name).write_text(svg)
         print(f"{name}: {len(svg) / 1024:.1f} KB")
